@@ -9,5 +9,14 @@
 date()
 
 ```
-The text continues here.
 
+HeyHeyHey, this is my course page.
+Hopefully this course will bring new knowledge to all the participants.
+
+To whom it might concern, my GitHub repository can be found under the link down below:
+
+[GitHub/RetuWonData](https://github.com/RetuWonData/IODS-project)
+
+Hope you find is as interesting as I do.
+
+Cheers, Retu
