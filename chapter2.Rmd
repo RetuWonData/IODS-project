@@ -39,7 +39,7 @@ ggplot(learning, aes(x = age, y = points, col = gender))+
 These two relationship shown above seems to be rather interesting. Surprisingly or not, if the attitude is better the learning outcome is better. 
 Additionally, higher age correlates with lower learning outcome, especially for male.
 On the other hand plots below are not that interesting although they demonstrate the different between sex.
-```{r, figures-side, fig.show="hold", out.width="50%"}
+```{r, fig.show="hold", out.width="50%"}
 library(ggplot2)
 
 # initialize plot with data and aesthetic mapping
@@ -82,7 +82,7 @@ In this model estimates are about 11.6 and 3.52 meaning that value of dependant 
 
 Multiple R-squared is 0.19 meaning that residuals are quite big and that this model is not nessesary the best for this data. To get better look of residuals several visualization can be done.
 
-```{r}
+```{r, out.width="100%"}
 par(mfrow = c(2,2))
 plot(my_model2, which = c(1,2,5))
 ```
