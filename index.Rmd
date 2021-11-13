@@ -14,6 +14,7 @@ output:
 ***
 
 # Introduction to Open Data Science - Course Project
+This is overall view of the course updating weekly, so stay tuned.
 
 ```{r child = "chapter1.Rmd"}
 # This will include Chapter 1 (that is updated in its own file) in the document.

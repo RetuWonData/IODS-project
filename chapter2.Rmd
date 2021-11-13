@@ -1,5 +1,4 @@
-# Chapter 2
-# Simple regression and model validation
+# Chapter 2: Simple regression and model validation
 
 *Describe the work you have done this week and summarize your learning.*
 
