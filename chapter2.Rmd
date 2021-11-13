@@ -1,4 +1,5 @@
-# Insert chapter 2 title here
+# Chapter 2
+# Simple regression and model validation
 
 *Describe the work you have done this week and summarize your learning.*
 
@@ -6,8 +7,85 @@
 - Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
 - Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
 
+I'll do exactly whats mentioned above. First lets explore the data that we are dealing with. It is data related 
+
 ```{r}
-date()
+learning <- read.csv("data/learning2014.csv",header = T)
+str(learning)
+
+```
+Here you can see some structures of the data. As demonstrated, we have 166 observation containing 7 different variables. 
+Gender is in this case binomial containing M (Male) and F (Female). 
+Age (in years) is derived from the date of birth. 
+Attitude describes global attitude toward statistics and it is the mean of several observation. 
+Variables deep, stra and surf are describing the averages from different questions. 
+The last variable points is the number of points from the exam.
+
+Here is some figures showing some of the important findings from this study.
+
+```{r, fig.show="hold", out.width="50%"}
+
+library(ggplot2)
+
+# initialize plot with data and aesthetic mapping
+ggplot(learning, aes(x = attitude, y = points, col = gender))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  ggtitle("Student's points in function of attitude")
+ggplot(learning, aes(x = age, y = points, col = gender))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  ggtitle("Student's points in relation to age")
+```
+These two relationship shown above seems to be rather interesting. Surprisingly or not, if the attitude is better the learning outcome is better. 
+Additionally, higher age correlates with lower learning outcome, especially for male.
+On the other hand plots below are not that interesting although they demonstrate the different between sex.
+```{r, figures-side, fig.show="hold", out.width="50%"}
+library(ggplot2)
+
+# initialize plot with data and aesthetic mapping
+ggplot(learning, aes(x = surf, y = points, col = gender))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  ggtitle("Student's points in function of attitude")
+ggplot(learning, aes(x = deep, y = points, col = gender))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  ggtitle("Student's points in function of attitude")
+```
+And below we have numerical summary.
+```{r}
+summary(learning)
+```
+People participating seems to be quite young and had good points overall.
+
+Next we are going to evaluate the relationship of the variables with linear model.
+
+```{r}
+my_model <- lm(points ~ gender+age+attitude+deep+stra+surf, data = learning)
+
+# summary of the model
+summary(my_model)
+```
+After linear modeling and statistical testing, one can see that there is not so much difference. P value of the whole model is  1.599e-07, which means there is at least one variable effecting to points value.
+
+T-test value probabilities Pr(>|t|) describe the change in dependent value after change in explanatory variable. The cut off for significance is typically alfa = 0.05. With this cutoff attitude is the only variable inducing significant changes so fitting new model with it. 
+
+
+```{r}
+my_model2 <- lm(points ~ attitude, data = learning)
+
+# summary of the model
+summary(my_model2)
+
+```
+In this model estimates are about 11.6 and 3.52 meaning that value of dependant variable is 11.6 when explanatory variable is x = 0. Estimate of attitude tells that dependant variable increase 3.52 'points' when attitude increase by 1.
+
+Multiple R-squared is 0.19 meaning that residuals are quite big and that this model is not nessesary the best for this data. To get better look of residuals several visualization can be done.
+
+```{r}
+par(mfrow = c(2,2))
+plot(my_model2, which = c(1,2,5))
 ```
 
-Here we go again...
+Assumptions related to linear model are obviously linearity and that the distribution is normally distributed. The model follows normality assumption quite good as can be seen from QQ-plot. Furthermore, there is a constant variance in errors as can be seen in residual plot and non of the points have unusually high leverage to the model. As a sum up, the model describes the relationship between points and attitude quite good.
