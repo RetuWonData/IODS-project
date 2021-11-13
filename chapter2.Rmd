@@ -82,8 +82,9 @@ In this model estimates are about 11.6 and 3.52 meaning that value of dependant 
 
 Multiple R-squared is 0.19 meaning that residuals are quite big and that this model is not nessesary the best for this data. To get better look of residuals several visualization can be done.
 
-```{r, out.width="100%"}
-par(mfrow = c(2,2))
+```{r, fig.show="hold", out.width="50%"}
+par(mar = c(4, 4, .1, .1))
+# par(mfrow = c(2,2))
 plot(my_model2, which = c(1,2,5))
 ```
 
