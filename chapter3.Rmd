@@ -1,4 +1,4 @@
-# Chapter 3: Clustering and classification
+# Chapter 3: Logistic regression
 
 ## Data
 
