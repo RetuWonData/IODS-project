@@ -1,0 +1,181 @@
+# Chapter 4: Clustering and classification
+
+## Data
+
+Loading the data and having some look of the main principles.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(boot)
+library(MASS)
+library(corrplot)
+data(Boston)
+head(Boston)
+dim(Boston)
+```
+
+This boston data set is contains 506 observations in 14 following variables:
+
+crim = per capita crime rate by town.
+
+zn = proportion of residential land zoned for lots over 25,000 sq.ft.
+
+indus = proportion of non-retail business acres per town.
+
+chas = Charles River dummy variable (= 1 if tract bounds river; 0 otherwise).
+
+nox = nitrogen oxides concentration (parts per 10 million).
+
+rm = average number of rooms per dwelling.
+
+age = proportion of owner-occupied units built prior to 1940.
+
+dis = weighted mean of distances to five Boston employment centres.
+
+rad = index of accessibility to radial highways.
+
+tax = full-value property-tax rate per \$10,000.
+
+ptratio = pupil-teacher ratio by town.
+
+black = 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town.
+
+lstat = lower status of the population (percent).
+
+medv = median value of owner-occupied homes in \$1000s.
+
+
+Here is numerical and graphical abstract of the data.
+
+```{r}
+summary(Boston)
+cor_matrix <- cor(Boston) %>% round(digits = 2)
+corrplot(cor_matrix, method="circle", type="upper", cl.pos="b", tl.pos="d", tl.cex = 0.6)
+```
+
+Visual overview show strong negative correlation between:
+
+*lower status of the population (percent) and median value of owner-occupied homes in \$1000s
+*proportion of owner-occupied units built prior to 1940 and weighted mean of distances to five Boston employment centres
+*proportion of non-retail business acres per town and weighted mean of distances to five Boston employment centres
+
+These correlations make sense. For example, it is evident that buildings that are old are closer to employment centers.
+
+Additionaly there are strong positive correlation between:
+
+*index of accessibility to radial highways and full-value property-tax rate per \$10,000
+*proportion of non-retail business acres per town and nitrogen oxides concentration (parts per 10 million)
+
+These correlations are also evident. The high way access indicate higher property tax rate and industry provide some NO emissions.
+
+<a href="#top">Back to top</a>
+
+## Scaling
+```{r}
+boston_scaled <- scale(Boston)
+boston_scaled <- as.data.frame(boston_scaled)
+summary(boston_scaled)
+```
+The mean is zero for all variables as they are divided by their means.
+
+```{r}
+quant <- quantile(boston_scaled$crim)
+crim <- cut(boston_scaled$crim, breaks = quant, include.lowest = TRUE, labels = c("low","med_low","med_high","high"))
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+boston_scaled <- cbind(boston_scaled, crim)
+
+# Creating training and testing sets
+n <- nrow(boston_scaled)
+ind <- sample(n,  size = n * 0.8)
+training <- boston_scaled[ind,]
+testing <- boston_scaled[-ind,]
+```
+
+<a href="#top">Back to top</a>
+
+## Fit the linear discriminant
+
+```{r}
+ldamod <- lda(crim ~ ., data = training)
+ldamod
+```
+```{r}
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "blue", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(training$crim)
+
+plot(ldamod, dimen = 2, col = classes, pch = classes)
+lda.arrows(ldamod, myscale = 2)
+```
+
+There is a lot to understand in this figure for me. Apparently variable rad is important in this data.
+
+<a href="#top">Back to top</a>
+
+## Class prediction
+
+Removing the old data that are next predicted.
+
+```{r}
+orig_class <- testing$crim
+testing <- dplyr::select(testing, -crim)
+```
+
+Then the prediction itself.
+
+```{r}
+pred <- predict(ldamod, newdata = testing)
+table(correct = orig_class, predicted = pred$class)
+```
+
+The prediction is pretty good for high and low but not so good especially for med_low group. Of course the training set and testing set are randomly assigned meaning that the result is changing every time it goes through. More validation is needed to have better evaluation.
+
+<a href="#top">Back to top</a>
+
+## K-means
+
+```{r}
+data('Boston')
+boston_scaled2 <- scale(Boston)
+boston_scaled2 <- as.data.frame(boston_scaled2)
+
+# some distances
+dist_eu <- dist(boston_scaled2)
+summary(dist_eu)
+```
+Plotting is not very efficient with all the variables so only plotting nox, rm, age, dis, rad and tax variables.
+
+```{r}
+km <-kmeans(boston_scaled2, centers = 4)
+pairs(boston_scaled2[,5:10], col = km$cluster)
+
+```
+
+Next trying to figure out best number of clusters.
+
+```{r}
+set.seed(17)
+k_max <- 10
+twcss <- sapply(1:k_max, function(k){kmeans(boston_scaled2, k)$tot.withinss})
+qplot(x = 1:k_max, y = twcss, geom = 'line') + theme_bw()
+```
+
+This exploration indicates that increasing number of clusters over 2 wont give dramatically better results. Therefor 2 clusters will give the best results.
+
+```{r}
+km <-kmeans(Boston, centers = 2)
+pairs(boston_scaled2[,6:10], col = km$cluster)
+```
+
+The best separation between groups can be found in variables tax (property tax-rate) and rad (distance to the radial highways).
+
+All the variables were plotted at first but they didn't provide any further information and only made figures harder to read so they are not shown.
