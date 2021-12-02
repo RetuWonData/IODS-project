@@ -1,0 +1,121 @@
+# Chapter 5: Dimensionality reduction techniques
+
+## Overview of the data
+
+```{r}
+human <- read.csv("data/human.csv", row.names = 1)
+summary(human)
+```
+
+Here are the distribution plots.
+
+```{r, echo=F}
+par(mfrow = c(2,4))
+hist(human$edu2_ratio, main="edu2_ratio", xlab="")
+hist(human$lab_ratio, main="lab_ratio", xlab="")
+hist(human$Exp_Life, main="Exp_Life", xlab="")
+hist(human$Exp_Educ, main="Exp_Educ", xlab="")
+hist(human$GNI, main="GNI", xlab="")
+hist(human$Mort_ratio, main="Mort_ratio", xlab="")
+hist(human$ABR, main="ABR", xlab="")
+hist(human$PRP, main="PRP", xlab="")
+
+
+```
+
+Th variables in human data are definitely not normally distributed. 
+
+```{r,echo=F, message=FALSE, warning=FALSE}
+library(corrplot)
+library(dplyr)
+```
+```{r}
+cor_matrix<-cor(human) %>% round(digits = 2)
+cor_matrix
+corrplot(cor_matrix, method="circle", type="lower", cl.pos="b", tl.pos="d", tl.cex = 0.6)
+```
+
+There is some clear positive and negative correlations. Negative correlation can be seen between life expectancy at birth and maternal mortality ratio (r =-0.86) plus expected years of schooling and maternal mortality ratio (r = -0.74). Additionally, there is positive correlation between Exp_Life and Exp_Educ (r = 0.79) plus Mort_ratio and ABR (r =  0.76).
+
+<a href="#top">Back to top</a>
+
+## PCA with non standardized values
+
+```{r, echo=F, message=FALSE, warning=FALSE}
+library(ggbiplot)
+```
+
+```{r}
+pca <- prcomp(human, center = F, scale. = F)
+summa <- summary(pca)
+pca_names <- round(100*summa$importance[2,], digits = 2)
+biplot(pca, choices = 1:2, cex = c(0.6, 1), col = c("grey40", "deeppink2"),
+       xlabs = c(1:nrow(human)), xlab = paste0("PC1 (", pca_names[1], "%)"),
+       ylab = paste0("PC2 (", pca_names[2], "%)"),
+       sub = "GNI explaine all the variation")
+```
+
+Results indicate that variable GNI explains all the variation in the data although it is most likely not true.
+
+<a href="#top">Back to top</a>
+
+## PCA with non standardized values
+
+```{r}
+pca <- prcomp(human, center = T, scale. = T)
+summa <- summary(pca)
+pca_names <- round(100*summa$importance[2,], digits = 2)
+biplot(pca, choices = 1:2, cex = c(0.5, 1), col = c("grey40", "deeppink2"),
+       #xlabs = c(1:nrow(human)),
+       xlab = paste0("PC1 (", pca_names[1], "%)"),
+       ylab = paste0("PC2 (", pca_names[2], "%)"),
+       sub = "Now there is some variation")
+```
+
+As expected, result differ quite much between PCA with non standardized values and PCA with standardized values. Difference can be explained with mathematics. The PCA only understand standard deviation and scales and thus say that GNI with biggest scale and SD explains all the variance in the data. PCA does not have brains so it does not understand are variables having the same SD or scale.
+
+Variables causing majority of variation are Exp_Educ, edu2_ratio,  Exp_Life, Mort_ratio, and ABR.
+
+<a href="#top">Back to top</a>
+
+## Personal interpretation
+
+The second PCA shown here explains 69% of the variation in the data which is good number. PC1 covers 54 percentage of it. The first PC is inversely associated (PC is slower when variable is higher) with education and expected life span. Also, it is directly associated (PC is higher when variable is higher) with maternal mortal and adolescent birth rate. These finding can be found to be the opposite for each other as typically when the education is higher, the maternal mortality rate is lower.
+
+PC2 explain about 16 percentage of variation in the data. It is directly associated with female participation in the society meaning the portion of labor force and percentage of females in the parliament. Basically, if PC2 value is high for some country it means that females are capable to affect to the society in country under consideration.
+
+"lab_ratio" = Labo2.F / Labo2.M 
+"PRP" = Percetange of female representatives in parliament
+
+The second PC explained 16% of variation in the data. It associated positively with female participation in the society including proportions of females in the labor force and parliament. This PC indicates how well females are able to affect the society via working life and politics.
+
+```{r}
+
+
+```
+
+<a href="#top">Back to top</a>
+
+## MCA analysis
+
+```{r, echo=F, message=FALSE, warning=FALSE}
+library(FactoMineR)
+library(tidyr)
+library(factoextra)
+library(dplyr)
+```
+```{r}
+data("tea")
+keep_columns <- c("Tea", "How", "how", "sugar", "where", "lunch")
+tea_time <- dplyr::select(tea, one_of(keep_columns))
+dim(tea_time)
+summary(tea_time)
+str(tea_time)
+gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+mca <- MCA(tea_time, graph = FALSE)
+summary(mca)
+fviz_screeplot(mca, addlabels = TRUE, ylim = c(0, 20))
+plot(mca, invisible=c("ind"), habillage = "quali", graph.type = "classic")
+```
+
+This MCA is trying to explain six variables related to tea drinking. The data contains 300 observations. Plots shown above demonstrate that the first few dimensions explain high number of variation in the data. First two plotted to MCA map are capable to explain almost 30 percentage of variation. In this plot the distance between points describe the relationship between variables. For example, variables "how" and "where" are popping up together in the plot meaning they are somehow similar. Same observation can be obtained from histograms and it is definitely the main finding from selected variables.
