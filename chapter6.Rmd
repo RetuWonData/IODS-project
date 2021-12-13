@@ -1,0 +1,218 @@
+# Chapter 6: Analysis of longitudinal data
+
+This week data under investigation is longitudinal. Two different data sets will be analyzed.
+
+## Rats
+
+The first data set describes rats and their nutrition. Data contains two groups few measurement points and weight.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(tidyr)
+library(lme4)
+RATSL <- read.csv("data/Rats_longitudinal.csv", row.names = 1)
+str(RATSL)
+RATSL$ID <- factor(RATSL$ID)
+RATSL$Group <- factor(RATSL$Group)
+summary(RATSL)
+```
+
+```{r}
+library(ggplot2)
+ggplot(RATSL, aes(x = Time, y = Weight, linetype = ID)) +
+  geom_line() + 
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  scale_x_continuous(name = "Time", breaks = seq(0, 60, 10)) + 
+  scale_y_continuous(name = "Weight") + 
+  theme(legend.position = "none")
+```
+
+First illustration of the data already show the difference between groups. Additionally, on mouse in group 2 is very heavy compared to others.
+
+<a href="#top">Back to top</a>
+
+Next we will have a look of standardized.
+
+```{r}
+library(dplyr)
+RATSL <- RATSL %>%
+  group_by(Time) %>%
+  mutate(stdweight = (Weight - mean(Weight))/ sd(Weight)) %>%
+  ungroup()
+
+ggplot(RATSL, aes(x = Time, y = stdweight, linetype = ID)) +
+  geom_line() + 
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  scale_x_continuous(name = "Time", breaks = seq(0, 60, 10)) + 
+  scale_y_continuous(name = "STD weight") + 
+  theme(legend.position = "none")
+```
+
+As expected, the growing trend is disappearing.
+
+Next up graphical summary.
+
+```{r}
+n <- RATSL$Time %>% unique() %>% length()
+RAT_sum <- RATSL %>%
+  group_by(Group, Time) %>%
+  summarise( mean = mean(Weight), se = sd(Weight)/sqrt(n) ) %>%
+  ungroup()
+glimpse(RAT_sum)
+```
+
+<a href="#top">Back to top</a>
+
+```{r}
+ggplot(RAT_sum, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  scale_linetype_manual(values = c(1,2,3)) +
+  geom_point(size=3) +
+  scale_shape_manual(values = c(1,2,3)) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.9,0.4)) +
+  scale_x_continuous(name = "Time", breaks = seq(0, 60, 10)) +
+  scale_y_continuous(name = "mean weight +/- error")
+```
+
+Graph shows clear difference between groups. To conclude this box plot illustration is used.
+
+```{r}
+RAT_sum2 <- RATSL %>%
+  filter(Time > 1) %>%
+  group_by(Group, ID) %>%
+  summarise( mean=mean(Weight) ) %>%
+  ungroup()
+glimpse(RAT_sum2)
+```
+
+```{r}
+ggplot(RAT_sum2, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=11, size=4, fill = "white") +
+  scale_y_continuous(name = "mean weight at the end")
+```
+
+One of the means in group 2 is much higher compared to outhers so this will be dropped as an outlier.
+
+```{r}
+RAT_sum2 <- RAT_sum2 %>% filter(mean < 570)
+
+ggplot(RAT_sum2, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", geom = "point", shape=11, size=4, fill = "white") +
+  scale_y_continuous(name = "mean weight at the end")
+```
+
+And now the means look better! To further conclude the the significance between the groups linear regression analysis will be made.
+
+```{r}
+RATS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", sep  ="\t", header = T)
+RATS <- RATS[c(-12),]
+RAT_sum2 <- RAT_sum2 %>%
+  mutate(baseline = RATS$WD1)
+
+mod <- lm(mean ~ baseline + Group, data = RAT_sum2)
+anova(mod)
+```
+
+Results demonstrate that there is major difference between mice groups. P-value between group values is 0.0037, well above alfa 0.05. Without removing the one outlier p-value remains 0.076 that is not significant.
+This demonstrate that preprosessing is a critical part of data analysis.
+
+<a href="#top">Back to top</a>
+
+## Bprs
+
+Next longitudinal Bprs data will be analyzed. This data represents 40 male subjects that were receiving different treatment for eight weeks during which they were rated on brief psychiatric rating scale (BPRS).
+It is used to evaluate the level of schizophrenia.
+
+First of all some summaries of the data.
+
+```{r}
+BPRSL <- read.csv("data/Bprsl_longitudinal.csv", header = TRUE)
+BPRSL$treatment <- factor(BPRSL$treatment)
+BPRSL$subject <- factor(BPRSL$subject)
+str(BPRSL)
+```
+
+```{r}
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(BPRSL$bprs), max(BPRSL$bprs)))
+```
+
+Data seem to have quite big variance. With gentle estimation somobody would say that there is decreasing trend but lets analyze the data first.
+
+<a href="#top">Back to top</a>
+
+Linear mixed model to data.
+
+```{r}
+regmod <- lm(bprs ~ week + treatment, data = BPRSL)
+summary(regmod)
+```
+
+This model don't understand that the data is repeated so it can not be trusted really. Instead random intercept model could be better suited.
+
+```{r}
+library(lme4)
+refmod <- lmer(bprs ~ week + treatment + (1 | subject), data = BPRSL, REML = FALSE)
+summary(refmod)
+```
+
+This model now gives more suitable results as for example standard error for week is now smaller. Still this model doesn't show optimal fit.
+To get even better fit for this kind of real life data both random intercept and random slope are used. 
+
+```{r}
+refmod2 <- lmer(bprs ~ week + treatment + (week | subject), data = BPRSL, REML = FALSE)
+summary(refmod2)
+anova(refmod, refmod2)
+```
+
+Now the t value for treatment2 in refmod2 is looking extremely low already. Additionally, chi-squared p-value is low, 0.026 meaning thet tre refmod2 model is better describing this data.
+Still one more option with interactions between treatments to go.
+
+```{r}
+refmod3 <- lmer(bprs ~ week * treatment + (week | treatment), data = BPRSL, REML = FALSE)
+summary(refmod3)
+anova(refmod2, refmod3)
+```
+
+Unfortunately this option is not making model any better. As modle evaluation tells, chi-squared p-value is 1, meaning that there is no use for this model with this data.
+
+As said lets continue with previous model. Here is some visual comparison of the real observation and the data from the model.
+
+```{r}
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() +
+  scale_x_continuous(name = "Weeks") +
+  scale_y_continuous(name = "BPRS") +
+  theme(legend.position = "none") +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both)
+```
+
+```{r}
+Fitted <- fitted(refmod2)
+BPRSL <- BPRSL %>% mutate(fitted = Fitted)
+
+ggplot(BPRSL, aes(x = week, y = Fitted, linetype = subject)) +
+  geom_line() +
+  scale_x_continuous(name = "Weeks") +
+  scale_y_continuous(name = "Fitted BPRS") +
+  theme(legend.position = "none") +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ treatment, labeller = label_both)
+```
+
+The lines are showing similar kind of changes that can be seen in the real data. This is defenately better model than the first one, as it doesn't allow slope
+randomness meaning that all the lines are parallel. Also, third model dont cahnge a thing compared to this second one. Always need to remember that this is just a model, and that exact fit is impossible to get.
+
+Thanks for the grat course!!
